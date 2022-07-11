@@ -3,6 +3,7 @@ from flask import render_template, request, redirect
 from flaskext.mysql import MySQL
 from datetime import datetime
 import os
+from flask import send_from_directory , url_for
 
 
 app=Flask(__name__)
@@ -17,16 +18,20 @@ mysql.init_app(app)
 CARPETA = os.path.join("uploads")
 app.config['CARPETA']=CARPETA
 
+@app.route('/uploads/<nombreFoto>')
+def uploads(nombreFoto):
+    return send_from_directory(app.config['CARPETA'],nombreFoto)
+
 @app.route("/")
 def index():
     sql = "SELECT * FROM `empleados`;"
-    conn=mysql.connect()
+    conn = mysql.connect()
     cursor=conn.cursor()
     cursor.execute(sql)
     empleados = cursor.fetchall()
     print(empleados)
     conn.commit()
-    return render_template('empleados/index.html', empleados=empleados)
+    return render_template('empleados/index.html', empleados=empleados )
 
 @app.route("/destroy/<int:id>")
 def destroy(id):
@@ -58,6 +63,7 @@ def update():
     _correo = request.form['txtCorreo']
     _foto = request.files['txtFoto'] 
     _id = request.form['txtId'] 
+    
     sql = "UPDATE empleados SET nombre=%s, correo=%s WHERE id=%s;"
     datos = (_nombre,_correo,_id)
 
@@ -74,7 +80,11 @@ def update():
 
         cursor.execute("SELECT foto FROM empleados WHERE id=%s", _id)
         fila=cursor.fetchall()
+        print("------------------------------")
+        print("------------------------------")
+        print("------------------------------")
         print(fila)
+        print("------------------------------")
         os.remove(os.path.join(app.config['CARPETA'], fila[0][0]))
         cursor.execute("UPDATE empleados SET foto=%s WHERE id=%s", (nuevoNombreFoto, _id))
         conn.commit()
@@ -102,12 +112,14 @@ def storage():
         _foto.save("uploads/" + nuevoNombreFoto)
 
     sql = "INSERT INTO `empleados` (`id`, `nombre`, `correo`, `foto`) VALUES (NULL, %s, %s, %s);"
+    
     datos = (_nombre,_correo,nuevoNombreFoto)
+    
     conn=mysql.connect()
     cursor=conn.cursor()
     cursor.execute(sql, datos)
     conn.commit()
-    return render_template('empleados/index.html') 
+    return redirect('/')
 
 if __name__ == '__main__':
     app.run(debug=True)
